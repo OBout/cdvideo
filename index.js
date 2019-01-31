@@ -32,12 +32,12 @@ pc.onaddstream = function (obj) {
     vid.setAttribute('autoplay', 'autoplay');
     vid.setAttribute('id', 'video-small');
     document.getElementById('users-container').appendChild(vid);
-    vid.src = window.URL.createObjectURL(obj.stream);
+    vid.srcObject = obj.stream;
 }
 
 navigator.getUserMedia({ video: true }, function (stream) {
     var video = document.querySelector('video');
-    video.src = window.URL.createObjectURL(stream);
+    video.srcObject = stream;
     pc.addStream(stream);
 }, error);
 
