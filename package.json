@@ -9,6 +9,7 @@
   "author": "Oscar Bout",
   "license": "MIT",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.16.4",
     "fs": "0.0.1-security",
     "http": "0.0.0",

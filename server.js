@@ -1,3 +1,4 @@
+var cors = require('cors')
 var express = require('express'),
     app = express(),
     http = require('http'),
@@ -6,6 +7,7 @@ var express = require('express'),
     path = require('path'),
     server, io, sockets = [];
 
+app.use(cors());
 app.use(express.static(__dirname));
 
 app.get('/', function (req, res) {
