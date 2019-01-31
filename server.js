@@ -7,15 +7,15 @@ var express = require('express'),
     path = require('path'),
     server, io, sockets = [];
 
-app.use(cors());
-app.use(express.static(__dirname));
+// app.use(cors());
+// app.use(express.static(__dirname));
 
-app.get('/', function (req, res) {
-    res.sendFile(__dirname + '/index.html');
-});
+// app.get('/', function (req, res) {
+//     res.sendFile(__dirname + '/index.html');
+// });
 
-server = http.Server(app);
-server.listen(5000);
+// server = http.Server(app);
+// server.listen(5000);
 
 console.log('Listening on port 5000');
 
