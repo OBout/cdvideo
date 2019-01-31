@@ -32,6 +32,7 @@ io.on('connection', function (socket) {
     });
 
     socket.on('make-offer', function (data) {
+        console.log('making offer');
         socket.to(data.to).emit('offer-made', {
             offer: data.offer,
             socket: socket.id
@@ -39,6 +40,7 @@ io.on('connection', function (socket) {
     });
 
     socket.on('make-answer', function (data) {
+        console.log('making answer');
         socket.to(data.to).emit('answer-made', {
             socket: socket.id,
             answer: data.answer
