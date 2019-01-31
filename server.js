@@ -3,15 +3,16 @@ var express = require('express'),
     app = express(),
     socketIO = require('socket.io'),
     fs = require('fs'),
+    http = require('http'),
     path = require('path'),
     server, io, sockets = [];
 var https = require('https');
 
 // This line is from the Node.js HTTPS documentation.
-var options = {
-    key: fs.readFileSync('client-key.pem'),
-    cert: fs.readFileSync('client-cert.pem')
-  };
+// var options = {
+//     key: fs.readFileSync('client-key.pem'),
+//     cert: fs.readFileSync('client-cert.pem')
+//   };
 
 app.use(cors());
 app.use(express.static(__dirname));
@@ -20,7 +21,7 @@ app.get('/', function (req, res) {
     res.sendFile(__dirname + '/index.html');
 });
 
-server = https.Server(options, app);
+server = http.Server(app);
 server.listen(443);
 
 console.log('Listening on port 443');
