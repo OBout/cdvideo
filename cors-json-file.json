@@ -1,0 +1,72 @@
+[
+    {
+        "origin": [
+            "https://oscowebvideostream.appspot.com/"
+        ],
+        "responseHeader": [
+            "Content-Type"
+        ],
+        "method": [
+            "GET",
+            "HEAD",
+            "DELETE"
+        ],
+        "maxAgeSeconds": 3600
+    },
+    {
+        "origin": [
+            "https://oscowebvideostream.appspot.com/"
+        ],
+        "responseHeader": [
+            "Content-Type"
+        ],
+        "method": [
+            "GET",
+            "HEAD",
+            "DELETE"
+        ],
+        "maxAgeSeconds": 3600
+    },
+    {
+        "origin": [
+            "https://www.oscoweb.com/videooscoweb/"
+        ],
+        "responseHeader": [
+            "Content-Type"
+        ],
+        "method": [
+            "GET",
+            "HEAD",
+            "DELETE"
+        ],
+        "maxAgeSeconds": 3600
+    },
+    {
+        "origin": [
+            "https://localhost/"
+        ],
+        "responseHeader": [
+            "Content-Type"
+        ],
+        "method": [
+            "GET",
+            "HEAD",
+            "DELETE"
+        ],
+        "maxAgeSeconds": 3600
+    },
+    {
+        "origin": [
+            "http://localhost/"
+        ],
+        "responseHeader": [
+            "Content-Type"
+        ],
+        "method": [
+            "GET",
+            "HEAD",
+            "DELETE"
+        ],
+        "maxAgeSeconds": 3600
+    }
+]

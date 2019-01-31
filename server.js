@@ -1,23 +1,29 @@
 var cors = require('cors')
 var express = require('express'),
     app = express(),
-    http = require('http'),
     socketIO = require('socket.io'),
     fs = require('fs'),
     path = require('path'),
     server, io, sockets = [];
+var https = require('https');
 
-// app.use(cors());
-// app.use(express.static(__dirname));
+// This line is from the Node.js HTTPS documentation.
+var options = {
+    key: fs.readFileSync('client-key.pem'),
+    cert: fs.readFileSync('client-cert.pem')
+  };
 
-// app.get('/', function (req, res) {
-//     res.sendFile(__dirname + '/index.html');
-// });
+app.use(cors());
+app.use(express.static(__dirname));
 
-// server = http.Server(app);
-// server.listen(5000);
+app.get('/', function (req, res) {
+    res.sendFile(__dirname + '/index.html');
+});
 
-console.log('Listening on port 5000');
+server = https.Server(options, app);
+server.listen(443);
+
+console.log('Listening on port 443');
 
 io = socketIO(server);
 
