@@ -1,3 +1,12 @@
+const app = require('express')();
+const cors = require('cors')
+
+const allowedOrigins = "localhost:* 127.0.0.1:* www.oscoweb.com:*"; 
+
+const http = require('http').Server(app.use(cors()));
+// const http = require('http').Server(options, app);
+const io = require('socket.io')(http, { origins: allowedOrigins});
+
 var socket = io.connect('https://oscowebvideostream.appspot.com/');
 
 var answersFrom = {}, offer;
