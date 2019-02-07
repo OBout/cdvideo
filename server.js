@@ -1,9 +1,20 @@
 const app = require('express')();
 const cors = require('cors')
 const allowedOrigins = "*"; 
-const http = require('http').Server(app.use(cors()));
+// const http = require('http').Server(app.use(cors()));
 // const http = require('http').Server(options, app);
-const io = require('socket.io')(http, { origins: allowedOrigins});
+// const io = require('socket.io')(http, { origins: allowedOrigins});
+
+app.use(function(req, res, next) {
+        res.header("Access-Control-Allow-Origin", "*");
+        res.header("Access-Control-Allow-Headers", "X-Requested-With");
+        res.header("Access-Control-Allow-Headers", "Content-Type");
+        res.header("Access-Control-Allow-Methods", "PUT, GET, POST, DELETE, OPTIONS");
+        next();
+    });
+var server = http.createServer(app);
+io = socketio.listen(server, {log:false, origins:'*:*'})
+
 
 var socket = io.connect('https://oscowebvideostream.appspot.com/');
 
