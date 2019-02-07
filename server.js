@@ -1,64 +1,100 @@
-var cors = require('cors')
-var express = require('express'),
-    app = express(),
-    socketIO = require('socket.io'),
-    fs = require('fs'),
-    http = require('http'),
-    path = require('path'),
-    server, io, sockets = [];
-var https = require('https');
+var socket = io.connect('https://oscowebvideostream.appspot.com/');
 
-// This line is from the Node.js HTTPS documentation.
-// var options = {
-//     key: fs.readFileSync('client-key.pem'),
-//     cert: fs.readFileSync('client-cert.pem')
-//   };
+var answersFrom = {}, offer;
 
-app.use(cors());
-app.use(express.static(__dirname));
+var peerConnection = window.RTCPeerConnection ||
+    window.mozRTCPeerConnection ||
+    window.webkitRTCPeerConnection ||
+    window.msRTCPeerConnection;
 
-app.get('/', function (req, res) {
-    res.sendFile(__dirname + '/index.html');
+var sessionDescription = window.RTCSessionDescription ||
+    window.mozRTCSessionDescription ||
+    window.webkitRTCSessionDescription ||
+    window.msRTCSessionDescription;
+
+navigator.getUserMedia = navigator.getUserMedia ||
+    navigator.webkitGetUserMedia ||
+    navigator.mozGetUserMedia ||
+    navigator.msGetUserMedia;
+
+var pc = new peerConnection({
+    iceServers: [{
+        url: "stun:stun.services.mozilla.com",
+        username: "somename",
+        credential: "somecredentials"
+    }]
 });
 
-server = http.Server(app);
-server.listen(443);
+pc.onaddstream = function (obj) {
+    var vid = document.createElement('video');
+    vid.setAttribute('class', 'video-small');
+    vid.setAttribute('autoplay', 'autoplay');
+    vid.setAttribute('id', 'video-small');
+    document.getElementById('users-container').appendChild(vid);
+    vid.src = window.URL.createObjectURL(obj.stream);
+}
 
-console.log('Listening on port 443');
+navigator.getUserMedia({ video: true }, function (stream) {
+    var video = document.querySelector('video');
+    video.src = window.URL.createObjectURL(stream);
+    pc.addStream(stream);
+}, error);
 
-io = socketIO(server);
+function error(err) {
+    console.warn('Error', err);
+}
 
-io.on('connection', function (socket) {
+function createOffer(id) {
+    pc.createOffer(function (offer) {
+        pc.setLocalDescription(new sessionDescription(offer), function () {
+            socket.emit('make-offer', {
+                offer: offer,
+                to: id
+            });
+        }, error);
+    }, error);
+}
 
-    socket.emit('add-users', {
-        users: sockets
-    });
+socket.on('answer-made', function (data) {
+    pc.setRemoteDescription(new sessionDescription(data.answer), function () {
+        document.getElementById(data.socket).setAttribute('class', 'active');
+        if (!answersFrom[data.socket]) {
+            createOffer(data.socket);
+            answersFrom[data.socket] = true;
+        }
+    }, error);
+});
 
-    socket.broadcast.emit('add-users', {
-        users: [socket.id]
-    });
+socket.on('offer-made', function (data) {
+    offer = data.offer;
 
-    socket.on('make-offer', function (data) {
-        console.log('making offer');
-        socket.to(data.to).emit('offer-made', {
-            offer: data.offer,
-            socket: socket.id
+    pc.setRemoteDescription(new sessionDescription(data.offer), function () {
+        pc.createAnswer(function (answer) {
+            pc.setLocalDescription(new sessionDescription(answer), function () {
+                socket.emit('make-answer', {
+                    answer: answer,
+                    to: data.socket
+                });
+            }, error);
+        }, error);
+    }, error);
+});
+
+socket.on('add-users', function (data) {
+    for (var i = 0; i < data.users.length; i++) {
+        var el = document.createElement('div'),
+            id = data.users[i];
+
+        el.setAttribute('id', id);
+        el.innerHTML = id;
+        el.addEventListener('click', function () {
+            createOffer(id);
         });
-    });
+        document.getElementById('users').appendChild(el);
+    }
+});
 
-    socket.on('make-answer', function (data) {
-        console.log('making answer');
-        socket.to(data.to).emit('answer-made', {
-            socket: socket.id,
-            answer: data.answer
-        });
-    });
-
-    socket.on('disconnect', function () {
-        sockets.splice(sockets.indexOf(socket.id), 1);
-        io.emit('remove-user', socket.id);
-    });
-
-    sockets.push(socket.id);
-
+socket.on('remove-user', function (id) {
+    var div = document.getElementById(id);
+    document.getElementById('users').removeChild(div);
 });
