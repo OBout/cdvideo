@@ -14,9 +14,6 @@
   "scripts": {
     "start": "node server.js"
   },
-  "engines": {
-    "node": "9.x"
-  },
   "main": "./node_scripts/index.js",
   "keywords": [
     "peer-to-peer",
