@@ -1,126 +1,119 @@
-var port = 12034; // change it to 443
+// http://127.0.0.1:9001
+// http://localhost:9001
 
-var fs = require('fs');
+const fs = require('fs');
+const path = require('path');
+const url = require('url');
+var httpServer = require('http');
 
-function resolveURL(url) {
-    var isWin = !!process.platform.match(/^win/);
-    if (!isWin) return url;
-    return url.replace(/\//g, '\\');
-}
+const ioServer = require('socket.io');
+const RTCMultiConnectionServer = require('./node_scripts/index.js');
 
-var _static = require('node-static');
-var file = new _static.Server('./public');
+var PORT = 9001;
+var isUseHTTPs = false;
 
-var http = require('http').createServer(function (request, response) {
-    request.addListener('end', function () {
-        if (request.url.search(/.png|.gif|.js|.css/g) == -1) {
-            file.serveFile(resolveURL('/index.html'), 402, {}, request, response);
-        } else file.serve(request, response);
-    }).resume();
-}).listen(port);
-
-/* HTTPs
-var options = {
-    key: fs.readFileSync('privatekey.pem'),
-    cert: fs.readFileSync('certificate.pem')
+const jsonPath = {
+    config: 'config.json',
+    logs: 'logs.json'
 };
 
-var https = require('https').createServer(options, function (request, response) {
-    request.addListener('end', function () {
-        if (request.url.search(/.png|.gif|.js|.css/g) == -1) {
-            file.serveFile('/index.html', 402, {}, request, response);
-        } else file.serve(request, response);
-    }).resume();
-}).listen(port);
-*/
+const BASH_COLORS_HELPER = RTCMultiConnectionServer.BASH_COLORS_HELPER;
+const getValuesFromConfigJson = RTCMultiConnectionServer.getValuesFromConfigJson;
+const getBashParameters = RTCMultiConnectionServer.getBashParameters;
 
-var CHANNELS = {};
+var config = getValuesFromConfigJson(jsonPath);
+config = getBashParameters(config, BASH_COLORS_HELPER);
 
-var WebSocketServer = require('websocket').server;
+// if user didn't modifed "PORT" object
+// then read value from "config.json"
+if(PORT === 9001) {
+    PORT = config.port;
+}
+if(isUseHTTPs === false) {
+    isUseHTTPs = config.isUseHTTPs;
+}
 
-new WebSocketServer({
-    httpServer: http,
-    autoAcceptConnections: false
-}).on('request', onRequest);
+function serverHandler(request, response) {
+    // to make sure we always get valid info from json file
+    // even if external codes are overriding it
+    config = getValuesFromConfigJson(jsonPath);
+    config = getBashParameters(config, BASH_COLORS_HELPER);
 
-function onRequest(socket) {
-    var origin = socket.origin + socket.resource;
-
-    var websocket = socket.accept(null, origin);
-
-    websocket.on('message', function (message) {
-        if (message.type === 'utf8') {
-            onMessage(JSON.parse(message.utf8Data), websocket);
-        }
+    response.writeHead(200, {
+        'Content-Type': 'text/plain'
     });
+    response.write('RTCMultiConnection Socket.io Server.\n\n' + 'https://github.com/muaz-khan/RTCMultiConnection-Server\n\n' + 'npm install RTCMultiConnection-Server');
+    response.end();
+}
 
-    websocket.on('close', function () {
-        truncateChannels(websocket);
+var httpApp;
+
+if (isUseHTTPs) {
+    httpServer = require('https');
+
+    // See how to use a valid certificate:
+    // https://github.com/muaz-khan/WebRTC-Experiment/issues/62
+    var options = {
+        key: null,
+        cert: null,
+        ca: null
+    };
+
+    var pfx = false;
+
+    if (!fs.existsSync(config.sslKey)) {
+        console.log(BASH_COLORS_HELPER.getRedFG(), 'sslKey:\t ' + config.sslKey + ' does not exist.');
+    } else {
+        pfx = config.sslKey.indexOf('.pfx') !== -1;
+        options.key = fs.readFileSync(config.sslKey);
+    }
+
+    if (!fs.existsSync(config.sslCert)) {
+        console.log(BASH_COLORS_HELPER.getRedFG(), 'sslCert:\t ' + config.sslCert + ' does not exist.');
+    } else {
+        options.cert = fs.readFileSync(config.sslCert);
+    }
+
+    if (config.sslCabundle) {
+        if (!fs.existsSync(config.sslCabundle)) {
+            console.log(BASH_COLORS_HELPER.getRedFG(), 'sslCabundle:\t ' + config.sslCabundle + ' does not exist.');
+        }
+
+        options.ca = fs.readFileSync(config.sslCabundle);
+    }
+
+    if (pfx === true) {
+        options = {
+            pfx: sslKey
+        };
+    }
+
+    httpApp = httpServer.createServer(options, serverHandler);
+} else {
+    httpApp = httpServer.createServer(serverHandler);
+}
+
+RTCMultiConnectionServer.beforeHttpListen(httpApp, config);
+httpApp = httpApp.listen(process.env.PORT || PORT, process.env.IP || "0.0.0.0", function() {
+    RTCMultiConnectionServer.afterHttpListen(httpApp, config);
+});
+
+// --------------------------
+// socket.io codes goes below
+
+ioServer(httpApp).on('connection', function(socket) {
+    RTCMultiConnectionServer.addSocket(socket, config);
+
+    // ----------------------
+    // below code is optional
+
+    const params = socket.handshake.query;
+
+    if (!params.socketCustomEvent) {
+        params.socketCustomEvent = 'custom-message';
+    }
+
+    socket.on(params.socketCustomEvent, function(message) {
+        socket.broadcast.emit(params.socketCustomEvent, message);
     });
-}
-
-function onMessage(message, websocket) {
-    if (message.checkPresence)
-        checkPresence(message, websocket);
-    else if (message.open)
-        onOpen(message, websocket);
-    else
-        sendMessage(message, websocket);
-}
-
-function onOpen(message, websocket) {
-    var channel = CHANNELS[message.channel];
-
-    if (channel)
-        CHANNELS[message.channel][channel.length] = websocket;
-    else
-        CHANNELS[message.channel] = [websocket];
-}
-
-function sendMessage(message, websocket) {
-    message.data = JSON.stringify(message.data);
-    var channel = CHANNELS[message.channel];
-    if (!channel) {
-        console.error('no such channel exists');
-        return;
-    }
-
-    for (var i = 0; i < channel.length; i++) {
-        if (channel[i] && channel[i] != websocket) {
-            try {
-                channel[i].sendUTF(message.data);
-            } catch (e) {}
-        }
-    }
-}
-
-function checkPresence(message, websocket) {
-    websocket.sendUTF(JSON.stringify({
-        isChannelPresent: !! CHANNELS[message.channel]
-    }));
-}
-
-function swapArray(arr) {
-    var swapped = [],
-        length = arr.length;
-    for (var i = 0; i < length; i++) {
-        if (arr[i])
-            swapped[swapped.length] = arr[i];
-    }
-    return swapped;
-}
-
-function truncateChannels(websocket) {
-    for (var channel in CHANNELS) {
-        var _channel = CHANNELS[channel];
-        for (var i = 0; i < _channel.length; i++) {
-            if (_channel[i] == websocket)
-                delete _channel[i];
-        }
-        CHANNELS[channel] = swapArray(_channel);
-        if (CHANNELS && CHANNELS[channel] && !CHANNELS[channel].length)
-            delete CHANNELS[channel];
-    }
-}
-
-console.log('listening both websocket and HTTP at port ' + port);
+});
