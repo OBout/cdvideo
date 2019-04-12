@@ -11,6 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-runtime: nodejs9
+runtime: nodejs8
 
 instance_class: F2
